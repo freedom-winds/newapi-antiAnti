@@ -1,0 +1,4 @@
+antianti-console
+antianti-console-linux-amd64
+*.exe
+.env

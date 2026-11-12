@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>内容审核管理台 · newapi-antiAnti</title>
+<style>
+  :root { --bg:#0f1419; --panel:#1a2129; --line:#2a3441; --txt:#d8e0e8; --dim:#8b98a5; --acc:#4a9eff; --ok:#4caf7d; --warn:#e0a34a; --bad:#e05c5c; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--txt); font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+  .wrap { max-width:1280px; margin:0 auto; padding:20px; }
+  h1 { font-size:20px; margin-bottom:4px; }
+  h3 { font-size:15px; margin-bottom:10px; }
+  .headrow { display:flex; align-items:baseline; gap:12px; }
+  .badge { font-size:12px; color:var(--dim); }
+  .badge b { color:var(--ok); font-weight:500; }
+  .tabs { display:flex; gap:4px; margin:14px 0 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .tabs button { background:none; border:none; color:var(--dim); padding:10px 16px; cursor:pointer; font-size:14px; border-bottom:2px solid transparent; }
+  .tabs button.on { color:var(--acc); border-bottom-color:var(--acc); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .hint { color:var(--dim); font-size:12px; margin-bottom:12px; line-height:1.7; }
+  .statgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+  .stat { text-align:center; padding:14px 6px; }
+  .stat .num { font-size:26px; font-weight:600; }
+  .stat .lbl { color:var(--dim); font-size:12px; margin-top:2px; }
+  .stat .sub { color:var(--dim); font-size:11px; margin-top:2px; }
+  .tablewrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; min-width:760px; }
+  th,td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; white-space:nowrap; }
+  th { color:var(--dim); font-weight:500; }
+  tr:hover td { background:rgba(255,255,255,.03); }
+  td.wrap, .detail { white-space:normal; word-break:break-all; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; white-space:nowrap; }
+  .t-clean { background:rgba(76,175,125,.15); color:var(--ok); }
+  .t-observe { background:rgba(224,163,74,.15); color:var(--warn); }
+  .t-blocked,.t-refused { background:rgba(224,92,92,.15); color:var(--bad); }
+  .t-error { background:rgba(139,152,165,.15); color:var(--dim); }
+  .t-r1 { background:rgba(76,175,125,.15); color:var(--ok); }
+  .t-r2 { background:rgba(224,92,92,.15); color:var(--bad); }
+  .t-r0 { color:var(--dim); font-size:12px; }
+  button.act { background:var(--acc); color:#fff; border:none; border-radius:5px; padding:5px 12px; cursor:pointer; font-size:13px; }
+  button.act.gray { background:#3a4653; }
+  button.act.green { background:var(--ok); }
+  button.act.red { background:var(--bad); }
+  button.act.sm { padding:2px 8px; font-size:12px; }
+  input,select,textarea { background:#121820; border:1px solid var(--line); color:var(--txt); border-radius:5px; padding:6px 10px; font-size:13px; }
+  textarea { width:100%; font-family:inherit; }
+  label.lbl { display:block; color:var(--dim); font-size:12px; margin:10px 0 4px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .row > div { flex:1; min-width:150px; }
+  .muted { color:var(--dim); font-size:12px; }
+  .gcards { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:12px; }
+  .gcard { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; }
+  .gcard.default { border-color:var(--acc); }
+  .gcard .ghead { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .gcard .gname { font-weight:600; font-size:14px; }
+  .gcard .cbs { display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:4px; }
+  .cb { display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer; }
+  .excerpt { max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dim); cursor:pointer; }
+  .excerpt:hover { color:var(--acc); }
+  .detail { display:none; white-space:pre-wrap; background:#121820; padding:10px; border-radius:6px; margin:6px 0; }
+  .detail.show { display:block; }
+  .testout { background:#121820; border-radius:6px; padding:10px; margin-top:8px; white-space:pre-wrap; word-break:break-all; display:none; }
+  .savebar { position:sticky; bottom:0; background:var(--panel); border-top:1px solid var(--line); padding:10px 0; margin-top:10px; text-align:right; z-index:5; }
+  #toast { position:fixed; top:20px; right:20px; background:var(--acc); color:#fff; padding:8px 16px; border-radius:6px; display:none; z-index:99; }
+  .loginbox { max-width:340px; margin:120px auto; }
+  .loginbox input { width:100%; margin-bottom:12px; }
+  .hide { display:none !important; }
+</style>
+</head>
+<body>
+<div id="login" class="loginbox card hide">
+  <h1>内容审核管理台</h1>
+  <label class="lbl">用户名</label><input id="lu" value="admin">
+  <label class="lbl">密码</label><input id="lp" type="password" onkeydown="if(event.key==='Enter')doLogin()">
+  <button class="act" style="width:100%" onclick="doLogin()">登录</button>
+</div>
+
+<div id="app" class="wrap hide">
+  <div class="headrow">
+    <h1>内容审核管理台</h1><span class="badge" id="modebadge"></span>
+  </div>
+  <div class="tabs">
+    <button class="on" data-tab="ov" onclick="tab('ov')">概览</button>
+    <button data-tab="pl" onclick="tab('pl')">分组设置</button>
+    <button data-tab="ht" onclick="tab('ht')">抽检记录</button>
+    <button data-tab="mk" onclick="tab('mk')">对话标记</button>
+    <button data-tab="ad" onclick="tab('ad')">高级设置</button>
+    <button data-tab="memo" onclick="tab('memo')">备忘录</button>
+  </div>
+
+  <!-- 概览 -->
+  <div id="tab-ov">
+    <div class="card"><div class="statgrid" id="stats"></div></div>
+    <div class="card">
+      <h3>近 30 天检出违规分布</h3>
+      <div class="tablewrap">
+      <table><thead><tr><th>日期</th><th>违规类型</th><th>数量</th></tr></thead><tbody id="statrows"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分组设置 -->
+  <div id="tab-pl" class="hide">
+    <div class="card">
+      <div class="hint">分组列表自动从 new-api 同步。<b>默认策略</b>作用于所有未单独设置（未勾"单独设置"）的分组；改默认策略时它们实时跟着变。
+      <br>模式区别：<b>只记录</b> = 检测到违规只记录在「抽检记录」里，用户完全无感（建议先跑一两周看误报率）；<b>拦截</b> = 检测到违规当场截停回复并提示用户，同时把该对话加入标记，之后继续追问会被直接拒答（误报可在「对话标记」解除）。
+      改动保存后 30 秒内生效。</div>
+      <div class="row" style="margin-bottom:12px">
+        <div><label class="lbl">审核总开关</label><select id="c_enabled"><option value="false">关闭</option><option value="true">开启</option></select></div>
+        <div style="flex:0;align-self:flex-end"><button class="act gray" onclick="resetAllFollow()">全部恢复跟随默认</button></div>
+      </div>
+      <div class="gcards" id="gcards"></div>
+      <div class="savebar"><button class="act green" onclick="saveConfig()">保存全部分组设置</button></div>
+    </div>
+  </div>
+
+  <!-- 抽检记录 -->
+  <div id="tab-ht" class="hide">
+    <div class="card">
+      <div class="hint">系统按比例随机抽取用户请求，交给检测模型（glm-5.3-flash）判断内容是否违规，下表是每次抽检的结果。点任意一行可看完整内容。</div>
+      <div class="row">
+        <div><label class="lbl">分组</label><select id="f_group"><option value="">全部</option></select></div>
+        <div><label class="lbl">检测结果</label><select id="f_action"><option value="">全部</option><option value="clean">无违规</option><option value="observe">违规·仅记录</option><option value="blocked">违规·已拦截</option><option value="refused">违规·已拒答</option><option value="error">检测失败</option></select></div>
+        <div><label class="lbl">违规类型</label><select id="f_category"><option value="">全部</option><option value="nsfw">NSFW色情</option><option value="cyberattack">攻击/入侵</option><option value="reverse_web">逆向未授权网站</option><option value="reverse_commercial">逆向商业软件</option></select></div>
+        <div style="flex:0"><button class="act" onclick="hitsOffset=0;loadHits()">查询</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tablewrap">
+      <table><thead><tr><th>时间</th><th>分组</th><th>用户</th><th>检测结果</th><th>违规类型</th><th>摘录</th><th>人工复核</th></tr></thead>
+      <tbody id="hitrows"></tbody></table>
+      </div>
+      <div style="margin-top:10px"><button class="act gray" onclick="hitsOffset=Math.max(0,hitsOffset-50);loadHits()">上一页</button>
+      <button class="act gray" onclick="hitsOffset+=50;loadHits()">下一页</button> <span class="muted" id="hit_total"></span></div>
+    </div>
+  </div>
+
+  <!-- 对话标记 -->
+  <div id="tab-mk" class="hide">
+    <div class="card">
+      <div class="hint">被标记的对话在有效期内，用户继续追问会被直接拒答（请求不会发给模型）；重新开一个新对话不受影响。发现误报点「解除标记」，30 秒内生效。</div>
+      <div class="tablewrap">
+      <table><thead><tr><th>用户ID</th><th>违规类型</th><th>检测说明</th><th>登记时间</th><th>失效时间</th><th>操作</th></tr></thead>
+      <tbody id="markrows"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 高级设置 -->
+  <div id="tab-ad" class="hide">
+    <div class="card">
+      <h3>检测通道</h3>
+      <div class="hint">抽中的请求会发给这个地址上的模型做判断，当前走 nk-gateway 的专用租户。</div>
+      <div class="row">
+        <div style="flex:2"><label class="lbl">接口地址</label><input id="c_base" style="width:100%"></div>
+        <div style="flex:2"><label class="lbl">API Key</label><input id="c_key" style="width:100%"></div>
+        <div><label class="lbl">模型</label><input id="c_model" style="width:150px"></div>
+      </div>
+      <label class="lbl">测试文本（模拟一次检测）</label>
+      <div class="row"><div style="flex:3"><textarea id="t_text" rows="2"></textarea></div>
+        <div style="flex:0"><button class="act gray" onclick="doTest()">发送测试</button></div></div>
+      <div id="t_out" class="testout"></div>
+    </div>
+    <div class="card">
+      <h3>提示语模板</h3>
+      <label class="lbl">截停提示（回复末尾追加或直接回复，{category} 替换为违规类型）</label>
+      <textarea id="c_tpl_block" rows="2"></textarea>
+      <label class="lbl">标记对话提示（被标记对话再次请求时回复）</label>
+      <textarea id="c_tpl_marked" rows="2"></textarea>
+    </div>
+    <div class="card">
+      <h3>检测参数</h3>
+      <div class="row">
+        <div><label class="lbl">判定门槛（置信度，越高越不容易误判）</label><input id="c_conf" type="number" step="0.05" min="0" max="1" style="width:100px"></div>
+        <div><label class="lbl">标记有效期（天）</label><input id="c_ttl" type="number" min="1" style="width:90px"></div>
+        <div><label class="lbl">回复结束前等待检测的宽限（秒）</label><input id="c_grace" type="number" min="0" max="30" style="width:90px"></div>
+        <div><label class="lbl">检测超时（秒）</label><input id="c_timeout" type="number" min="10" style="width:90px"></div>
+        <div><label class="lbl">预检等待上限（秒，超时放行）</label><input id="c_pftime" type="number" min="5" max="120" style="width:90px"></div>
+        <div><label class="lbl">送检文本上限（字符）</label><input id="c_maxchars" type="number" min="500" style="width:110px"></div>
+      </div>
+    </div>
+    <div class="savebar"><button class="act green" onclick="saveConfig(true)">保存高级设置</button></div>
+  </div>
+
+  <!-- 备忘录 -->
+  <div id="tab-memo" class="hide">
+    <div class="card">
+      <div class="hint">存在站点数据库里的私人便签（只有管理台登录可见），手机随时能看。适合记待办、要转发的话等。</div>
+      <textarea id="memo_text" rows="14" placeholder="随手记点什么…"></textarea>
+      <div style="margin-top:10px;text-align:right"><span class="muted" id="memo_saved"></span>
+        <button class="act green" onclick="saveMemo()">保存备忘录</button></div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+let TOKEN = localStorage.getItem('mod_token') || '';
+const $ = id => document.getElementById(id);
+const CATS = ['nsfw','cyberattack','reverse_web','reverse_commercial'];
+const CAT_NAMES = {nsfw:'NSFW色情', cyberattack:'攻击/入侵', reverse_web:'逆向未授权网站', reverse_commercial:'逆向商业软件'};
+const ACTION_NAMES = {clean:'无违规', observe:'违规·仅记录', blocked:'违规·已拦截', refused:'违规·已拒答', error:'检测失败'};
+const MODE_NAMES = {off:'不检测', observe:'只记录 · 不影响用户', enforce:'拦截 · 截停并标记对话'};
+const MODE_SHORT = {off:'已关闭', observe:'只记录', enforce:'拦截'};
+let cfg = null, groups = [], hitsOffset = 0;
+
+async function api(path, opts={}) {
+  const r = await fetch(path, {...opts, headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN, ...(opts.headers||{})}});
+  if (r.status === 401) { showLogin(); throw new Error('unauthorized'); }
+  return r.json();
+}
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2200); }
+function fmtTs(ts){ return ts? new Date(ts*1000).toLocaleString('zh-CN',{hour12:false}) : ''; }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showLogin(){ $('login').classList.remove('hide'); $('app').classList.add('hide'); }
+function showApp(){ $('login').classList.add('hide'); $('app').classList.remove('hide'); init(); }
+
+async function doLogin(){
+  const r = await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:$('lu').value,password:$('lp').value})});
+  const j = await r.json();
+  if(!j.ok){ toast(typeof j.error==='string'? j.error : (j.error&&j.error.message) || '登录失败'); return; }
+  TOKEN = j.token; localStorage.setItem('mod_token', TOKEN); showApp();
+}
+
+function tab(name){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
+  ['ov','pl','ht','mk','ad','memo'].forEach(t=>$('tab-'+t).classList.toggle('hide', t!==name));
+  if(name==='ov') loadOverview(); if(name==='pl') loadPolicy();
+  if(name==='ht') loadHits(); if(name==='mk') loadMarks(); if(name==='ad') loadPolicy();
+  if(name==='memo') loadMemo();
+}
+
+async function init(){
+  await loadGroups();
+  tab('ov');
+}
+
+async function loadOverview(){
+  const j = await api('api/overview');
+  if(!j.ok) return;
+  const d = j.data;
+  const modeTxt = d.enabled ? (MODE_SHORT[d.mode]||d.mode) : '已关闭';
+  $('modebadge').innerHTML = d.enabled ? '运行中 · <b>'+modeTxt+'模式</b>' : '<b>已关闭</b>';
+  const sr = d.success_rate==null ? '—' : d.success_rate+'%';
+  const vr = d.violation_ratio==null ? '—' : d.violation_ratio+'%';
+  const sampledPct = (d.total_today>0 && d.sampled_today!=null) ? '占总请求 '+(d.sampled_today/d.total_today*100).toFixed(1)+'%' : '';
+  const items = [
+    ['今日总请求', d.total_today==null?'—':d.total_today, '来自 new-api 请求日志'],
+    ['今日抽检请求', d.sampled_today==null?'—':d.sampled_today, sampledPct],
+    ['检测成功率', sr, '失败 '+(d.detect_fail_today||0)+' 次（模型超时等）'],
+    ['今日检出违规', d.violation_today==null?'—':d.violation_today, '占抽检 '+vr+' · 拒答 '+(d.refused_today||0)],
+    ['已标记对话', d.marks_active==null?'—':d.marks_active, '有效期内继续追问将拒答'],
+  ];
+  $('stats').innerHTML = items.map(it=>`<div class="stat"><div class="num">${it[1]}</div><div class="lbl">${it[0]}</div><div class="sub">${it[2]||''}</div></div>`).join('');
+  $('statrows').innerHTML = (d.stats||[]).map(s=>
+    `<tr><td>${s.day}</td><td>${CAT_NAMES[s.category]||((!s.category)?'检测失败':s.category)}</td><td>${s.count}</td></tr>`).join('')
+    || '<tr><td colspan="3" class="muted">近30天无记录</td></tr>';
+}
+
+async function loadGroups(){
+  const j = await api('api/groups');
+  groups = (j.data?.groups || []).slice().sort();
+  $('f_group').innerHTML = '<option value="">全部</option>' + groups.map(g=>`<option>${esc(g)}</option>`).join('');
+}
+
+async function loadPolicy(){
+  const [cj, gj] = await Promise.all([api('api/config'), api('api/groups')]);
+  groups = (gj.data?.groups || groups).slice().sort();
+  $('f_group').innerHTML = '<option value="">全部</option>' + groups.map(g=>`<option>${esc(g)}</option>`).join('');
+  cfg = cj.data || {};
+  cfg.endpoint = cfg.endpoint || {};
+  cfg.templates = cfg.templates || {};
+  cfg.groups = cfg.groups || {};
+  // 高级设置字段
+  $('c_base').value = cfg.endpoint.base_url || 'https://aiapi.keniis.top/nk/v1';
+  $('c_key').value = cfg.endpoint.api_key || '';
+  $('c_model').value = cfg.endpoint.model || 'glm-5.3-flash';
+  $('c_tpl_block').value = cfg.templates.block || '';
+  $('c_tpl_marked').value = cfg.templates.marked || '';
+  $('c_conf').value = cfg.min_confidence ?? 0.8;
+  $('c_ttl').value = cfg.mark_ttl_days ?? 7;
+  $('c_grace').value = cfg.tail_grace_sec ?? 3;
+  $('c_timeout').value = cfg.check_timeout_sec ?? 60;
+  $('c_pftime').value = cfg.preflight_timeout_sec ?? 30;
+  $('c_maxchars').value = cfg.max_check_chars ?? 6000;
+  $('c_enabled').value = String(!!cfg.enabled);
+  renderCards();
+}
+
+function cardHTML(gname, p, isDefault){
+  const custom = !isDefault && p != null;
+  const src0 = custom ? p : {mode: cfg.mode, sample_rate_bp: cfg.sample_rate_bp, deny: cfg.deny};
+  const mode = src0.mode || cfg.mode || 'observe';
+  const rate = (src0.sample_rate_bp!=null ? src0.sample_rate_bp : (cfg.sample_rate_bp!=null?cfg.sample_rate_bp:500));
+  const deny = src0.deny!=null ? src0.deny : (cfg.deny||[]);
+  const dis = (!custom && !isDefault) ? 'disabled' : '';
+  const cbs = CATS.map(c=>`<label class="cb"><input type="checkbox" class="pc" data-c="${c}" ${deny.includes(c)?'checked':''} ${dis}>${CAT_NAMES[c]}</label>`).join('');
+  return `<div class="gcard ${isDefault?'default':''}" data-g="${esc(gname)}" data-default="${isDefault?1:0}" data-custom="${custom?1:0}">
+    <div class="ghead"><span class="gname">${isDefault?'默认策略':esc(gname)}</span>
+      ${isDefault?'':`<label class="cb muted" title="勾选后此分组独立设置，不跟随默认"><input type="checkbox" class="pcustom" ${custom?'checked':''}>单独设置</label>`}
+    </div>
+    <label class="lbl">模式</label>
+    <select class="pm" ${dis}>${['off','observe','enforce'].map(m=>`<option value="${m}" ${mode===m?'selected':''}>${MODE_NAMES[m]}</option>`).join('')}</select>
+    ${isDefault?'':`<label class="cb" style="margin-top:6px" title="仅在模式=拦截时生效：被抽检的请求先扣住不发模型，等检测结果无违规才放行；违规直接截停（零费用）。检测超时自动放行。"><input type="checkbox" class="ppf" ${(p.preflight!=null?p.preflight:cfg.preflight)?'checked':''} ${dis}>预检 · 先检测后发模型（更严，多等几秒）</label>`}
+    <label class="lbl">抽检比例（万分比）</label>
+    <input class="pr" type="number" min="0" max="10000" value="${rate}" style="width:100px" ${dis}> <span class="muted">= ${rate/100}%</span>
+    <label class="lbl">判定为违规的类别（全不勾 = 不拦任何类别）</label>
+    <div class="cbs">${cbs}</div>
+    <div class="followhint muted" style="margin-top:8px;${custom?'display:none':''}">未单独设置，跟随默认策略</div>
+  </div>`;
+}
+
+function defaultVals(){
+  const def = document.querySelector('.gcard[data-default="1"]');
+  return {
+    mode: def.querySelector('.pm').value,
+    rate: +def.querySelector('.pr').value||0,
+    deny: [...def.querySelectorAll('.pc:checked')].map(cb=>cb.dataset.c)
+  };
+}
+function applyFollow(card, v){
+  card.querySelector('.pm').value = v.mode;
+  card.querySelector('.pr').value = v.rate;
+  const s = card.querySelector('.pr').nextElementSibling;
+  if(s) s.textContent = '= '+v.rate/100+'%';
+  card.querySelectorAll('.pc').forEach(cb=> cb.checked = v.deny.includes(cb.dataset.c));
+}
+function setCardDisabled(card, dis){
+  card.querySelectorAll('.pm,.pr,.pc').forEach(el=> el.disabled = dis);
+}
+function renderCards(){
+  let html = cardHTML('__default__', {mode: cfg.mode, sample_rate_bp: cfg.sample_rate_bp, deny: cfg.deny}, true);
+  for(const g of groups){
+    if(g === '__default__') continue;
+    html += cardHTML(g, cfg.groups[g], false);
+  }
+  $('gcards').innerHTML = html;
+  document.querySelectorAll('.gcard .pr').forEach(inp=>{
+    inp.addEventListener('input', ()=>{ const s=inp.nextElementSibling; if(s) s.textContent = '= '+(+inp.value||0)/100+'%'; });
+  });
+  // 默认策略变化 → 所有未单独设置的卡片实时跟随
+  const def = document.querySelector('.gcard[data-default="1"]');
+  ['input','change'].forEach(ev=> def.addEventListener(ev, ()=>{
+    const v = defaultVals();
+    document.querySelectorAll('.gcard[data-custom="0"]').forEach(c=> applyFollow(c, v));
+  }));
+  // 单独设置开关
+  document.querySelectorAll('.pcustom').forEach(tg=>{
+    tg.addEventListener('change', ()=>{
+      const card = tg.closest('.gcard');
+      const on = tg.checked;
+      card.dataset.custom = on ? '1' : '0';
+      setCardDisabled(card, !on);
+      card.querySelector('.followhint').style.display = on ? 'none' : '';
+      if(on){ applyFollow(card, defaultVals()); }  // 从当前默认值起步
+      else { applyFollow(card, defaultVals()); }
+    });
+  });
+}
+function resetAllFollow(){
+  document.querySelectorAll('.pcustom').forEach(tg=>{ tg.checked = false; tg.dispatchEvent(new Event('change')); });
+  toast('已全部恢复跟随默认，点"保存"生效');
+}
+
+async function saveConfig(advancedOnly){
+  const def = document.querySelector('.gcard[data-default="1"]');
+  const out = {
+    enabled: $('c_enabled').value==='true',
+    mode: def.querySelector('.pm').value,
+    sample_rate_bp: +def.querySelector('.pr').value||0,
+    deny: [...def.querySelectorAll('.pc:checked')].map(cb=>cb.dataset.c),
+    min_confidence: +$('c_conf').value||0.8,
+    mark_ttl_days: +$('c_ttl').value||7,
+    tail_grace_sec: +$('c_grace').value||3,
+    check_timeout_sec: +$('c_timeout').value||60,
+    preflight_timeout_sec: +$('c_pftime').value||30,
+    preflight: def.querySelector('.ppf') ? def.querySelector('.ppf').checked : false,
+    max_check_chars: +$('c_maxchars').value||6000,
+    endpoint: {base_url:$('c_base').value.trim(), api_key:$('c_key').value.trim(), model:$('c_model').value.trim()},
+    templates: {block:$('c_tpl_block').value, marked:$('c_tpl_marked').value},
+    groups: {}
+  };
+  document.querySelectorAll('.gcard[data-custom="1"]').forEach(card=>{
+    const g = card.dataset.g;
+    out.groups[g] = {
+      mode: card.querySelector('.pm').value,
+      sample_rate_bp: +card.querySelector('.pr').value||0,
+      deny: [...card.querySelectorAll('.pc:checked')].map(cb=>cb.dataset.c),
+      preflight: card.querySelector('.ppf') ? card.querySelector('.ppf').checked : false
+    };
+  });
+  const j = await api('api/config',{method:'POST',body:JSON.stringify({config:out})});
+  if(j.ok){ toast('已保存，30 秒内生效'); } else toast(typeof j.error==='string'?j.error:'保存失败');
+}
+
+async function doTest(){
+  const j = await api('api/test',{method:'POST',body:JSON.stringify({text:$('t_text').value})});
+  const out = $('t_out'); out.style.display='block';
+  if(!j.ok){ out.textContent = j.error; return; }
+  out.textContent = `HTTP ${j.data.status} · ${j.data.latency_ms}ms\n` + (j.data.content || j.data.error || j.data.raw || '(空)');
+}
+
+async function loadHits(){
+  const p = new URLSearchParams({limit:50, offset:hitsOffset,
+    group:$('f_group').value, category:$('f_category').value, action:$('f_action').value});
+  const j = await api('api/hits?'+p);
+  if(!j.ok) return;
+  $('hit_total').textContent = `共 ${j.data.total} 条`;
+  let n = 0;
+  $('hitrows').innerHTML = (j.data.hits||[]).map(h=>{
+    n++;
+    const isViol = ['observe','blocked','refused'].includes(h.action);
+    const rv = h.reviewed===1 ? '<span class="tag t-r1">误报</span>' : h.reviewed===2 ? '<span class="tag t-r2">确认违规</span>' : '<span class="t-r0">未复核</span>';
+    const cat = h.category ? h.category.split(',').map(c=>CAT_NAMES[c]||c).join('、') : '—';
+    const revBtns = isViol ? `<div style="margin-top:4px">
+        <button class="act green sm" onclick="event.stopPropagation();review(${h.id},1)">误报</button>
+        <button class="act red sm" onclick="event.stopPropagation();review(${h.id},2)">确认</button></div>` : '';
+    const detail = `检测说明：${h.reason||'（无）'}\n完整摘录：${h.excerpt||'（无）'}\n模型：${h.model_name}    请求ID：${h.request_id}    耗时：${h.latency_ms}ms`;
+    return `<tr onclick="toggleDetail(${n})" style="cursor:pointer">
+      <td>${fmtTs(h.created_at)}</td><td>${esc(h.group_name)}</td>
+      <td>${esc(h.username)||('#'+h.user_id)}</td>
+      <td><span class="tag t-${h.action}">${ACTION_NAMES[h.action]||h.action}</span><div class="muted">${h.latency_ms}ms</div></td>
+      <td>${cat}</td>
+      <td class="excerpt" title="点击看完整内容">${esc((h.excerpt||'').slice(0,50))}</td>
+      <td onclick="event.stopPropagation()">${rv}${revBtns}</td>
+    </tr><tr class="drow" id="drow-${n}" style="display:none"><td colspan="7"><div class="detail show">${esc(detail)}</div></td></tr>`;
+  }).join('') || '<tr><td colspan="7" class="muted">暂无记录</td></tr>';
+}
+
+function toggleDetail(n){
+  const el = $('drow-'+n);
+  if (el) el.style.display = el.style.display==='none' ? '' : 'none';
+}
+
+async function review(id, v){
+  const j = await api('api/hits/review',{method:'POST',body:JSON.stringify({id, reviewed:v})});
+  if(j.ok) loadHits(); else toast(j.error);
+}
+
+async function loadMarks(){
+  const j = await api('api/marks?limit=200');
+  if(!j.ok) return;
+  $('markrows').innerHTML = (j.data.marks||[]).map(m=>{
+    const cats = (m.category||'').split(',').filter(Boolean).map(c=>CAT_NAMES[c]||c).join('、') || '—';
+    return `<tr>
+    <td>${m.user_id}</td><td>${cats}</td><td class="wrap muted" style="max-width:320px">${esc(m.reason||'')}</td>
+    <td>${fmtTs(m.created_at)}</td><td>${fmtTs(m.expires_at)}</td>
+    <td><button class="act red sm" onclick="delMark(${m.id})">解除标记</button></td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="muted">当前没有已标记的对话</td></tr>';
+}
+
+async function delMark(id){
+  if(!confirm('解除该标记？解除后该对话恢复正常，30 秒内生效。')) return;
+  const j = await api('api/marks/delete',{method:'POST',body:JSON.stringify({id})});
+  if(j.ok){ toast('已解除'); loadMarks(); } else toast(j.error);
+}
+
+async function loadMemo(){
+  const j = await api('api/memo');
+  if(!j.ok) return;
+  $('memo_text').value = j.data.content || '';
+  $('memo_saved').textContent = '';
+}
+async function saveMemo(){
+  const j = await api('api/memo',{method:'POST',body:JSON.stringify({content:$('memo_text').value})});
+  if(j.ok){ $('memo_saved').textContent = '已保存 '+new Date().toLocaleTimeString('zh-CN',{hour12:false}); toast('备忘录已保存'); }
+  else toast(j.error||'保存失败');
+}
+
+if (TOKEN) {
+  fetch('api/overview',{headers:{'Authorization':'Bearer '+TOKEN}}).then(r=>{
+    if(r.ok) showApp(); else showLogin();
+  }).catch(showLogin);
+} else showLogin();
+</script>
+</body>
+</html>
