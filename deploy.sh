@@ -144,7 +144,8 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now "$SERVICE" >/dev/null 2>&1 || systemctl restart "$SERVICE"
+systemctl enable "$SERVICE" >/dev/null 2>&1
+systemctl restart "$SERVICE"
 sleep 2
 if [ "$(systemctl is-active "$SERVICE")" != "active" ]; then
   echo "[x] 服务启动失败，日志：journalctl -u $SERVICE -n 20"; exit 1
@@ -232,7 +233,10 @@ for f in matches:
     bak = f + ".bak-antianti-" + time.strftime("%Y%m%d%H%M%S")
     shutil.copy2(f, bak)
     try:
-        open(f, "w", encoding="utf-8").write(inject(f))
+        # 先算好新内容再写回：open("w") 会立刻截断文件，不能和 inject(f) 同表达式
+        new_text = inject(f)
+        with open(f, "w", encoding="utf-8") as fh:
+            fh.write(new_text)
         r = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
         if r.returncode != 0:
             shutil.copy2(bak, f)
